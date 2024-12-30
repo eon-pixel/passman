@@ -1,0 +1,12 @@
+This program requires a Python 3.10+ installation with Python added to the system path.
+
+There are two ways to do this, the easiest is during Python installation where the "Add python.exe to PATH" option is given.
+It needs to be ticked.
+
+The other way is to add Python to the system path manually. This can be done by following the instructions here:
+https://datatofish.com/add-python-to-windows-path
+
+Note for master password requirements: It needs to be a minimum of 8 characters and contain at least one letter, number and symbol.
+
+When the dialog box opens to enter details, the user might need to move the main window as the dialog box might have spawned
+behind it.
