@@ -156,9 +156,6 @@ class PassMan(QMainWindow):
         
         scroll_layout = QVBoxLayout(scroll_content)
         
-        warn_label = QLabel("Please check behind this window for dialogue boxes when adding an entry.")
-        scroll_layout.addWidget(warn_label)
-        
         gen_pwn_button = QPushButton("Generate Password")
         gen_pwn_button.clicked.connect(PassGen)
         scroll_layout.addWidget(gen_pwn_button)
