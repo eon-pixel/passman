@@ -1,110 +1,104 @@
+from PyQt6.QtWidgets import (QMainWindow, QWidget, QPushButton, QLabel, 
+                           QLineEdit, QVBoxLayout, QHBoxLayout, QScrollArea,
+                           QGridLayout, QCheckBox, QApplication)
+from PyQt6.QtCore import Qt
 import hashlib
-from tkinter.constants import BOTH, CENTER, END, LEFT, RIGHT, VERTICAL, Y
 from gen import PassGen
 from db import init_db
-from tkinter import Canvas, Frame, ttk
-import tkinter as tk
-from functools import partial
 from vault import VaultMethods
-from ttkthemes import ThemedTk
 import re
 
-class PassMan:
+class PassMan(QMainWindow):
     def __init__(self):
+        super().__init__()
         self.db, self.cursor = init_db()
-        self.window = ThemedTk(theme="breeze")
-        style = ttk.Style()
-        style.configure("Red.TLabel", foreground="red")
-        self.window.update()
+        
+        self.setWindowTitle("PassMan")
+        self.setMinimumWidth(440)
+        
+        self.central_widget = QWidget()
+        self.setCentralWidget(self.central_widget)
+        self.layout = QVBoxLayout(self.central_widget)
+        
+        # Check if master password exists
+        self.cursor.execute("SELECT * FROM master")
+        if self.cursor.fetchall():
+            self.login_user()
+        else:
+            self.new_user()
 
     def new_user(self):
-        self.window.geometry("440x250")
-        self.window.title("PassMan - New User")
-        self.window.resizable(False, False)
-
-        label1 = ttk.Label(self.window, text="Create a new master password:")
-        label1.config(anchor=CENTER)
-        label1.pack(pady=10)
-
-        mspwd_entry = ttk.Entry(self.window, width=20, show="*")
-        mspwd_entry.pack()
-        mspwd_entry.focus()
-
-        label2 = ttk.Label(self.window, text="Confirm your password")
-        label2.config(anchor=CENTER)
-        label2.pack(pady=10)
-
-        mspwd_confirm = ttk.Entry(self.window, width=20, show="*")
-        mspwd_confirm.pack()
-
-        self.check = ttk.Label(self.window)
-        self.check.config(text="Password needs at least one letter, number, and special character")
-        self.check.pack(pady=5)
-
-        showpwd_var = tk.BooleanVar()
-        showpwd_cb = ttk.Checkbutton(self.window, text="Show Password", variable=showpwd_var,
-                                    command=lambda: self.toggle_password_create(mspwd_entry, mspwd_confirm, showpwd_var))
-        showpwd_cb.pack(pady=5)
-
-        createpwd = ttk.Button(self.window, text="Create Password",
-                          command=partial(self.save_master_password, mspwd_entry, mspwd_confirm))
-        createpwd.pack(pady=5)
-        self.window.bind("<Return>", lambda event=None: createpwd.invoke)
+        self.clear_layout()
+        self.setFixedSize(440, 250)
+        
+        self.layout.addWidget(QLabel("Create a new master password:"))
+        
+        self.mspwd_entry = QLineEdit()
+        self.mspwd_entry.setEchoMode(QLineEdit.EchoMode.Password)
+        self.layout.addWidget(self.mspwd_entry)
+        
+        self.layout.addWidget(QLabel("Confirm your password"))
+        
+        self.mspwd_confirm = QLineEdit()
+        self.mspwd_confirm.setEchoMode(QLineEdit.EchoMode.Password)
+        self.layout.addWidget(self.mspwd_confirm)
+        
+        self.check = QLabel("Password needs at least one letter, number, and special character")
+        self.layout.addWidget(self.check)
+        
+        show_pwd = QCheckBox("Show Password")
+        show_pwd.stateChanged.connect(self.toggle_password_create)
+        self.layout.addWidget(show_pwd)
+        
+        create_btn = QPushButton("Create Password")
+        create_btn.clicked.connect(self.save_master_password)
+        self.layout.addWidget(create_btn)
 
     def login_user(self):
-        for widget in self.window.winfo_children():
-            widget.destroy()
+        self.clear_layout()
+        self.setFixedSize(440, 180)
+        
+        self.layout.addWidget(QLabel("Please enter your master password:"))
+        
+        self.pass_entry = QLineEdit()
+        self.pass_entry.setEchoMode(QLineEdit.EchoMode.Password)
+        self.layout.addWidget(self.pass_entry)
+        
+        self.check = QLabel()
+        self.layout.addWidget(self.check)
+        
+        show_pwd = QCheckBox("Show Password")
+        show_pwd.stateChanged.connect(self.toggle_password_login)
+        self.layout.addWidget(show_pwd)
+        
+        login_btn = QPushButton("Log in")
+        login_btn.clicked.connect(self.check_master_password)
+        self.layout.addWidget(login_btn)
 
-        self.window.geometry("440x180")
-        self.window.title("PassMan - Login")
-        self.window.resizable(False, False)
-
-        label1 = ttk.Label(self.window, text="Please enter your master password:")
-        label1.config(anchor=CENTER)
-        label1.pack(pady=10)
-
-        self.pass_entry = ttk.Entry(self.window, width=20, show="*")
-        self.pass_entry.pack(pady=4)
-        self.pass_entry.focus()
-
-        self.check = ttk.Label(self.window)
-        self.check.pack()
-
-        showpwd_var = tk.BooleanVar()
-        showpwd_cb = ttk.Checkbutton(self.window, text="Show Password", variable=showpwd_var,
-                                    command=lambda: self.toggle_password_login(self.pass_entry, showpwd_var))
-        showpwd_cb.pack(pady=5)
-
-        login_btn = ttk.Button(self.window, text="Log in", command=partial(
-            self.check_master_password, self.pass_entry))
-        login_btn.pack(pady=5)
-        self.window.bind('<Return>', lambda event=None: login_btn.invoke())
-
-    def toggle_password_create(self, entry1, entry2, var):
-        if var.get():
-            entry1.config(show="")
-            entry2.config(show="")
-
+    def toggle_password_create(self, state):
+        if state == Qt.CheckState.Checked:
+            self.mspwd_entry.setEchoMode(QLineEdit.EchoMode.Normal)
+            self.mspwd_confirm.setEchoMode(QLineEdit.EchoMode.Normal)
         else:
-            entry1.config(show="*")
-            entry2.config(show="*")
+            self.mspwd_entry.setEchoMode(QLineEdit.EchoMode.Password)
+            self.mspwd_confirm.setEchoMode(QLineEdit.EchoMode.Password)
 
-    def toggle_password_login(self, entry, var):
-        if var.get():
-            entry.config(show="")
+    def toggle_password_login(self, state):
+        if state == Qt.CheckState.Checked:
+            self.pass_entry.setEchoMode(QLineEdit.EchoMode.Normal)
         else:
-            entry.config(show="*")
+            self.pass_entry.setEchoMode(QLineEdit.EchoMode.Password)
 
-    def save_master_password(self, mspwd_entry, mspwd_confirm):
-        password1 = mspwd_entry.get()
-        password2 = mspwd_confirm.get()
+    def save_master_password(self):
+        password1 = self.mspwd_entry.text()
+        password2 = self.mspwd_confirm.text()
         
         if password1 != password2:
-            self.check.config(text="Passwords do not match", style="Red.TLabel")
+            self.check.setText("Passwords do not match")
             return
 
         if len(password1) < 8:
-            self.check.config(style="Red.TLabel", text="Password must be at least 8 characters long")
+            self.check.setText("Password must be at least 8 characters long")
             return
 
         if not self.check_password_strength(password1):
@@ -119,7 +113,7 @@ class PassMan:
             if not has_number: missing.append("number")
             if not has_special: missing.append("special character")
             
-            self.check.config(style="Red.TLabel", text=error_msg + " and ".join(missing))
+            self.check.setText(error_msg + " and ".join(missing))
             return
 
         hashed_password = self.encrypt_password(password1)
@@ -133,95 +127,77 @@ class PassMan:
         else:
             return False
 
-    def check_master_password(self, eb):
-        password = eb.get()
+    def check_master_password(self):
+        password = self.pass_entry.text()
         if not password:
-            self.check.config(style="Red.TLabel", text="Please enter a password")
+            self.check.setText("Please enter a password")
         else:
-            hashed = self.encrypt_password(eb.get())
+            hashed = self.encrypt_password(password)
             self.cursor.execute(
                 "SELECT * FROM master WHERE id = 1 AND password = ?", [hashed])
             if self.cursor.fetchall():
                 self.vault()
             else:
-                self.pass_entry.delete(0, END)
-                self.check.config(style="Red.TLabel", text="Incorrect password")
+                self.pass_entry.clear()
+                self.check.setText("Incorrect password")
 
     def vault(self):
-        for widget in self.window.winfo_children():
-            widget.destroy()
-
+        self.clear_layout()
         vault_methods = VaultMethods()
 
-        self.window.geometry("880x350")
-        self.window.title("Passify - Vault")
-        self.window.resizable(True, False)
-
-        frame = Frame(self.window)
-        frame.pack(fill=BOTH, expand=1)
-        canvas = Canvas(frame)
-        canvas.pack(side=LEFT, fill=BOTH, expand=1)
-
-        scrollbar = ttk.Scrollbar(frame, orient=VERTICAL, command=canvas.yview)
-        scrollbar.pack(side=RIGHT, fill=Y)
-
-        canvas.configure(yscrollcommand=scrollbar.set)
-        canvas.bind('<Configure>', lambda e: canvas.configure(
-            scrollregion=canvas.bbox("all")))
+        self.setFixedSize(880, 350)
         
-        frame_two = Frame(canvas)
-        canvas.create_window((0, 0), window=frame_two, anchor="nw")
-
-        warn_label = ttk.Label(frame_two)
-        warn_label.config(style="Red.TLabel", text="Please check behind this window for dialogue boxes when adding an entry.")
-        warn_label.grid(row=0, column=1, columnspan=6, pady=2)
-
-        gen_pwn_button = ttk.Button(frame_two, text="Generate Password", command=PassGen)
-        gen_pwn_button.grid(row=1, column=2, pady=10)
-
-        add_pwd_button = ttk.Button(
-            frame_two, text="Add Entry", command=partial(vault_methods.add_password, self.vault))
-        add_pwd_button.grid(row=1, column=3, pady=10)
-
-        label = ttk.Label(frame_two, text="Platform")
-        label.grid(row=2, column=0, padx=40, pady=10)
-        label = ttk.Label(frame_two, text="Email/Username")
-        label.grid(row=2, column=1, padx=40, pady=10)
-        label = ttk.Label(frame_two, text="Password")
-        label.grid(row=2, column=2, padx=40, pady=10)
-
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        self.layout.addWidget(scroll_area)
+        
+        scroll_content = QWidget()
+        scroll_area.setWidget(scroll_content)
+        
+        scroll_layout = QVBoxLayout(scroll_content)
+        
+        warn_label = QLabel("Please check behind this window for dialogue boxes when adding an entry.")
+        scroll_layout.addWidget(warn_label)
+        
+        gen_pwn_button = QPushButton("Generate Password")
+        gen_pwn_button.clicked.connect(PassGen)
+        scroll_layout.addWidget(gen_pwn_button)
+        
+        add_pwd_button = QPushButton("Add Entry")
+        add_pwd_button.clicked.connect(lambda: vault_methods.add_password(self.vault))
+        scroll_layout.addWidget(add_pwd_button)
+        
+        grid_layout = QGridLayout()
+        scroll_layout.addLayout(grid_layout)
+        
+        grid_layout.addWidget(QLabel("Platform"), 0, 0)
+        grid_layout.addWidget(QLabel("Email/Username"), 0, 1)
+        grid_layout.addWidget(QLabel("Password"), 0, 2)
+        
         self.cursor.execute("SELECT * FROM vault")
-
-        if self.cursor.fetchall():
-            i = 0
-            while True:
-                self.cursor.execute("SELECT * FROM vault")
-                array = self.cursor.fetchall()
-
-                platform = ttk.Label(frame_two, text=(array[i][1]))
-                platform.grid(column=0, row=i + 3)
-
-                account = ttk.Label(frame_two, text=(array[i][2]))
-                account.grid(column=1, row=i + 3)
-
-                password = ttk.Label(frame_two, text=(array[i][3]))
-                password.grid(column=2, row=i + 3)
-
-                copy_button = ttk.Button(frame_two, text="Copy",
-                                  command=partial(self.copy_text, array[i][3]))
-                copy_button.grid(column=3, row=i + 3, pady=10, padx=10)
-                update_button = ttk.Button(frame_two, text="Update",
-                                    command=partial(vault_methods.update_password, array[i][0], self.vault))
-                update_button.grid(column=4, row=i + 3, pady=10, padx=10)
-                delete_button = ttk.Button(frame_two, text="Delete",
-                                    command=partial(vault_methods.remove_password, array[i][0], self.vault))
-                delete_button.grid(column=5, row=i + 3, pady=10, padx=10)
-
-                i += 1
-
-                self.cursor.execute("SELECT * FROM vault")
-                if len(self.cursor.fetchall()) <= i:
-                    break
+        array = self.cursor.fetchall()
+        
+        for i, entry in enumerate(array):
+            platform = QLabel(entry[1])
+            grid_layout.addWidget(platform, i + 1, 0)
+            
+            account = QLabel(entry[2])
+            grid_layout.addWidget(account, i + 1, 1)
+            
+            password = QLabel(entry[3])
+            grid_layout.addWidget(password, i + 1, 2)
+            
+            copy_button = QPushButton("Copy")
+            copy_button.clicked.connect(lambda _, text=entry[3]: self.copy_text(text))
+            grid_layout.addWidget(copy_button, i + 1, 3)
+            
+            update_button = QPushButton("Update")
+            update_button.clicked.connect(lambda _, id=entry[0]: vault_methods.update_password(id, self.vault))
+            grid_layout.addWidget(update_button, i + 1, 4)
+            
+            delete_button = QPushButton("Delete")
+            delete_button.clicked.connect(lambda _, id=entry[0]: vault_methods.remove_password(id, self.vault))
+            grid_layout.addWidget(delete_button, i + 1, 5)
 
     def encrypt_password(self, password):
         password = password.encode("utf-8")
@@ -229,15 +205,17 @@ class PassMan:
         return encoded
     
     def copy_text(self, text):
-        self.window.clipboard_clear()
-        self.window.clipboard_append(text)
+        clipboard = QApplication.clipboard()
+        clipboard.setText(text)
+
+    def clear_layout(self):
+        while self.layout.count():
+            child = self.layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
 
 if __name__ == '__main__':
-    db, cursor = init_db()
-    cursor.execute("SELECT * FROM master")
-    passman = PassMan()
-    if cursor.fetchall():
-        passman.login_user()
-    else:
-        passman.new_user()
-    passman.window.mainloop()
+    app = QApplication([])
+    window = PassMan()
+    window.show()
+    app.exec()

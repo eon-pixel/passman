@@ -1,4 +1,4 @@
-from tkinter import simpledialog
+from PyQt6.QtWidgets import QInputDialog
 from db import init_db
 
 class VaultMethods:
@@ -6,8 +6,10 @@ class VaultMethods:
         self.db, self.cursor = init_db()
 
     def popup_entry(self, heading):
-        answer = simpledialog.askstring("Enter details", heading)
-        return answer
+        text, ok = QInputDialog.getText(None, "Enter details", heading)
+        if ok:
+            return text
+        return None
 
     def add_password(self, vault_screen):
         platform = self.popup_entry("Platform")

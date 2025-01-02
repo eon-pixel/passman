@@ -1,6 +1,6 @@
 # Please do not use this.
 
-This program was a proof of concept to test the use of Python, SQLite, and Tkinter to create a password manager. 
+This program was a proof of concept to test the use of Python, SQLite, and Qt6 to create a password manager. 
 
 **This password manager is not secure.** 
 

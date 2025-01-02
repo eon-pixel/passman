@@ -1,79 +1,80 @@
-from tkinter import ttk
-import tkinter as tk
-from ttkthemes import ThemedTk
+from PyQt6.QtWidgets import (QMainWindow, QWidget, QPushButton, QLabel, 
+                           QLineEdit, QVBoxLayout, QHBoxLayout, QFrame)
+from PyQt6.QtCore import Qt
 import string
 from secrets import choice
-from tkinter.constants import END
 
 UPPERCASE = list(string.ascii_uppercase)
 LOWERCASE = list(string.ascii_lowercase)
 NUMBER = list(string.digits)
-SYMBOLS = [
-    '@', '#', '$', '%', '&', '_', '(', ')', '+', '-', '*', '/', '=', '?', '!', '[', ']', '{', '}', '<', '>'
-    ]
+SYMBOLS = ['@', '#', '$', '%', '&', '_', '(', ')', '+', '-', '*', '/', '=', '?', '!', '[', ']', '{', '}', '<', '>']
 
-global counter
-counter = 1
+class PassGen(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("PassMan - Generator")
+        self.setFixedSize(450, 260)
+        
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        layout = QVBoxLayout(central_widget)
 
-class PassGen:
-    def __init__ (self):
-        global counter
-        if counter < 2:
-            counter = 2
-            self.window = ThemedTk(theme='breeze')
-            style = ttk.Style()
-            style.configure("Red.TLabel", foreground="red")
-            self.window.title("PassMan - Generator")
-            self.window.geometry("450x260")
-            self.window.resizable(False, False)
+        # Length entry
+        length_frame = QFrame()
+        length_frame.setFrameStyle(QFrame.Shape.Box)
+        length_layout = QVBoxLayout(length_frame)
+        length_layout.addWidget(QLabel("Enter the number of characters:"))
+        
+        self.length_entry = QLineEdit()
+        self.length_entry.setText("8")
+        length_layout.addWidget(self.length_entry)
+        layout.addWidget(length_frame)
 
-            self.label_frame = ttk.LabelFrame(self.window, text="Enter the number of characters:")
-            self.label_frame.pack(pady=20)
+        # Check label
+        self.check = QLabel()
+        layout.addWidget(self.check)
 
-            self.length_entry = ttk.Entry(self.label_frame, width=20)
-            self.length_entry.insert(0, "8")
-            self.length_entry.pack(padx=10, pady=10)
+        # Password entry
+        self.password_entry = QLineEdit()
+        self.password_entry.setMinimumWidth(300)
+        layout.addWidget(self.password_entry)
 
-            self.check = ttk.Label(self.window)
-            self.check.pack(pady=2)
-
-            self.password_entry = ttk.Entry(self.window, width=50)
-            self.password_entry.pack(pady=20)
-
-            self.button_frame = ttk.Frame(self.window)
-            self.button_frame.pack(pady=10)
-
-            self.generate = ttk.Button(self.button_frame, text="Generate Password", command=self.generate_password)
-            self.generate.grid(row=0, column=0, padx=10)
-
-            copy = ttk.Button(self.button_frame, text="Copy Password", command=self.copy)
-            copy.grid(row=0, column=1, padx=10)
-
-            self.window.protocol("WM_DELETE_WINDOW", self.close_window)
+        # Buttons
+        button_layout = QHBoxLayout()
+        generate_btn = QPushButton("Generate Password")
+        generate_btn.clicked.connect(self.generate_password)
+        copy_btn = QPushButton("Copy Password")
+        copy_btn.clicked.connect(self.copy)
+        
+        button_layout.addWidget(generate_btn)
+        button_layout.addWidget(copy_btn)
+        layout.addLayout(button_layout)
 
     def generate_password(self):
-        self.password_entry.delete(0, END)
-        self.check.config(text="")
+        self.password_entry.clear()
+        self.check.setText("")
         try:
-            password_length = int(self.length_entry.get())
+            password_length = int(self.length_entry.text())
             if password_length < 8 or password_length > 32:
-                self.check.config(style="Red.TLabel", text="Password must be between 8 and 32 characters long")
+                self.check.setText("Password must be between 8 and 32 characters long")
+                self.check.setStyleSheet("color: red")
             else:
                 data = UPPERCASE+LOWERCASE+NUMBER+SYMBOLS
                 password = ''.join(choice(data) for _ in range(password_length))
-                self.password_entry.insert(0,password)
+                self.password_entry.setText(password)
 
         except ValueError:
-            self.check.config(style="Red.TLabel", text="Please enter number of characters")
+            self.check.setText("Please enter number of characters")
+            self.check.setStyleSheet("color: red")
 
     def copy(self):
-        self.window.clipboard_clear()
-        self.window.clipboard_append(self.password_entry.get())
-
-    def close_window(self):
-        global counter
-        counter = 1
-        self.window.destroy()
+        text = self.password_entry.text()
+        if text:
+            clipboard = self.clipboard()
+            clipboard.setText(text)
 
 if __name__ == '__main__':
-    PassGen().window.mainloop()
+    app = QApplication([])
+    window = PassGen()
+    window.show()
+    app.exec()
